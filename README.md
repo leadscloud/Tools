@@ -16,6 +16,8 @@ LNMP/LNMPA服务器下的自动添加FTP账号及MYSQL账号的shell脚本。此
 
 lnmpa的备份脚本，在linux下使用`crontab -e`设置定时任务，可以定时备份你的服务器，包括所有网站目录，所有MYSQL数据库，所有网站信息。`0 3 */3 * * /root/backup.sh` 代表每3天备份一次，备份时间是凌晨3点。
 
+**注意：系统须安装lftp，否则无法使用，CentOS下使用 `yum install lftp` 命令即可。**
+
 ###resource.md###
 
 一些优质学习资源
