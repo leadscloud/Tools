@@ -68,14 +68,11 @@ function install_lnmp_vhost {
         chmod -R 755 $vhostdir
         chown -R www:www $vhostdir
 
-        if [ "$rewrite" != 'none' ] && [ ! -z $rewrite ]; then
-            if [ ! -f /usr/local/nginx/conf/$rewrite.conf ]; then
-                echo "Create Virtul Host ReWrite file......"
-                touch /usr/local/nginx/conf/$rewrite.conf
-                echo "Create rewirte file successful,now you can add rewrite rule into /usr/local/nginx/conf/$rewrite.conf."
-            else
-                echo "You select the exist rewrite rule:/usr/local/nginx/conf/$rewrite.conf"
-            fi
+        if[ -z $rewrite ]; then
+            rewrite="none"
+        fi
+        if [ ! -f /usr/local/nginx/conf/$rewrite.conf ]; then
+            touch /usr/local/nginx/conf/$rewrite.conf
         fi
         
         cat >/usr/local/nginx/conf/vhost/$domain.conf<<eof
@@ -443,7 +440,7 @@ for domain in $domainlist; do
         if [ -x /etc/init.d/httpd ]; then
             install_lnmpa_vhost $domain
         else
-            install_lnmpa_vhost $domain
+            install_lnmp_vhost $domain
         fi
         # add ftp account
         if [ "$add_ftp" == 'y' ]; then
