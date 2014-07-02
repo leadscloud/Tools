@@ -63,7 +63,7 @@ function install_lnmp_vhost {
         chmod -R 755 $vhostdir
         chown -R www:www $vhostdir
 
-        if[ -z $rewrite ]; then
+        if [ -z $rewrite ]; then
             rewrite="none"
         fi
         if [ ! -f /usr/local/nginx/conf/$rewrite.conf ]; then
