@@ -379,6 +379,54 @@ http://www.$1/e/install/index.php?enews=setdb&f=4
 END
 }
 
+function show_help {
+    cat <<END
+Usage: $0 [OPTION]...
+Bulk add virtual host, Include FTP, MYSQL, Web Application
+Web application include wordpress, typecho, empirecms
+When your first run, you need to enter the password of mysql
+
+System Requirements:
+   1. web server is LNMP/LNMPA, LNMPA is a tool to auto-compile & install Nginx+MySQL+PHP+Apache on Linux
+      this script is only suitable licess's LNMP
+      LNMP Official Website: http://lnmp.org/install.html
+   2. FTP Server must be Pureftpd. Install method: http://lnmp.org/faq/ftpserver.html
+
+Options:
+  -d domain           domain list, multiple domains must use double quotes.
+                          such as, $0 -d "domain1.com domain2.com"
+                          suggest you do not use the domain start with www
+  -f                  add ftp account
+  -m                  add mysql account
+  -a webapp           install web application, include [wordpress,typecho,empirecms], default none
+  -r                  add redirect rule, only LNMP need it, include [typecho,wordpress] or your custom rule, default none
+  -l                  enable host log history, default disable logging
+  -h                  show help
+
+Example:
+  $0 -d "love4026.org sbmzhcn.com" -fm                  quick add a domain with ftp,mysql
+  $0 -d love4026.org -fm -a wordpress                   quick add a domain with ftp,mysql and wordpress
+  $0 -d love4026.org -fm -a wordpress -r wordpress      in LNMP,you will need nginx rewrite rule,can not use .htaccess
+  $0 -d love4026.org -fml                               quick add a domain with ftp,mysql,and turn on logging
+
+When you are finished add, in your website directory will auto add a file which contain your account information.
+for example, when add domain love4026.org with ftp and mysql option, script will create two files:
+    1. /home/wwwroot/love4026.org/love4026.org.ftp.txt
+    2. /home/wwwroot/love4026.org/love4026.org.mysql.txt
+
+Author: Ray.
+Website: <http://www.love4026.org>.
+Email: <sbmzhcn@gmail.com>.
+If you have any questions, please contact me!
+More information at: <https://github.com/sbmzhcn/Tools>.
+END
+    exit 1
+}
+
+if [ "$#" = "1" ] && [ "$1" = "--help" ]; then
+    show_help
+fi
+
 if [ "$#" = "2" ] && [ "$1" = "--remove" ]; then
     check_mycnf
     echo "Now removing vhost: $2, contain ftp,mysql,vhost ..."
@@ -393,7 +441,7 @@ if [ "$#" = "2" ] && [ "$1" = "--remove" ]; then
     exit 1
 fi
 
-while getopts "d:rlfma:" arg #选项后面的冒号表示该选项需要参数
+while getopts "d:rlfma:h" arg #选项后面的冒号表示该选项需要参数
 do
     case $arg in
     d) # domain list
@@ -421,9 +469,12 @@ do
         check_mycnf
         web_app=$OPTARG
     ;;
+    h) # help
+        show_help
+    ;;
     ?)  #当有不认识的选项的时候arg为?
         echo "unkonw argument"
-    exit 1
+        exit 1
     ;;
     esac
 done
