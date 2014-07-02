@@ -7,14 +7,15 @@
 # 
 # Author: Ray Chang <http://www.love4026.org>
 # 
-# Version: 1.0.1
+# Version: 1.0.2
 #
 # FTP Service must be pureftpd.
 #
-# Usage:
+# wget -O bulk_vhost.sh https://raw.githubusercontent.com/sbmzhcn/Tools/master/bulk_vhost.sh && chmod u+x bulk_vhost.sh
 # 
 #
 # For more information please visit http://www.love4026.org/
+# Code url: https://raw.githubusercontent.com/sbmzhcn/Tools/master/bulk_vhost.sh
 #
 ################################################################################
 #
