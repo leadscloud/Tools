@@ -19,6 +19,8 @@
 ################################################################################
 #
 
+hostip="$(ifconfig | grep -A 1 'eth0' | tail -1 | cut -d ':' -f 2 | cut -d ' ' -f 1)"
+
 function die {
     echo "ERROR: $1" > /dev/null 1>&2
     exit 1
@@ -269,6 +271,7 @@ EOF
     cat >> "/home/wwwroot/$1/$1.ftp.txt" <<END
 [$1.ftp]
 domainname = $1
+hostip = $hostip
 username = $ftpusername
 password = $ftppwd
 END
@@ -462,8 +465,12 @@ for domain in $domainlist; do
         echo "================================================" | tee -a /root/all_domain_ftp_mysql.txt
         cat "/home/wwwroot/$domain/$domain.ftp.txt" | tee -a /root/all_domain_ftp_mysql.txt
         cat "/home/wwwroot/$domain/$domain.mysql.txt" 2>/dev/null | tee -a /root/all_domain_ftp_mysql.txt
+        echo "Created by script in $(date +"%Y-%m-%d %T %:z")" | tee -a /root/all_domain_ftp_mysql.txt
         echo "================================================" | tee -a /root/all_domain_ftp_mysql.txt
         echo "" >>/root/all_domain_ftp_mysql.txt
+
+        sed -i "/$/a Created by script in $(date +"%Y-%m-%d %T %:z")"  "/home/wwwroot/$domain/$domain.ftp.txt"
+        sed -i "/$/a Created by script in $(date +"%Y-%m-%d %T %:z")"  "/home/wwwroot/$domain/$domain.mysql.txt"
     fi
 done
 
