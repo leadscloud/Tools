@@ -16,6 +16,8 @@
 #
 # For more information please visit http://www.love4026.org/
 # Code url: https://raw.githubusercontent.com/sbmzhcn/Tools/master/bulk_vhost.sh
+# 
+# Last Updated: 2014-07-03
 #
 ################################################################################
 #
@@ -382,7 +384,7 @@ END
 
 function show_help {
     cat <<END
-Usage: $0 [OPTION]...
+Usage: `basename $0` [OPTION]...
 Bulk add virtual host, Include FTP, MYSQL, Web Application
 Web application include wordpress, typecho, empirecms
 When your first run, you need to enter the password of mysql
@@ -405,10 +407,10 @@ Options:
   -h                  show help
 
 Example:
-  $0 -d "love4026.org sbmzhcn.com" -fm                  quick add a domain with ftp,mysql
-  $0 -d love4026.org -fm -a wordpress                   quick add a domain with ftp,mysql and wordpress
-  $0 -d love4026.org -fm -a wordpress -r wordpress      in LNMP,you will need nginx rewrite rule,can not use .htaccess
-  $0 -d love4026.org -fml                               quick add a domain with ftp,mysql,and turn on logging
+  `basename $0` -d "love4026.org sbmzhcn.com" -fm                  quick add a domain with ftp,mysql
+  `basename $0` -d love4026.org -fm -a wordpress                   quick add a domain with ftp,mysql and wordpress
+  `basename $0` -d love4026.org -fm -a wordpress -r wordpress      in LNMP,you will need nginx rewrite rule,can not use .htaccess
+  `basename $0` -d love4026.org -fml                               quick add a domain with ftp,mysql,and turn on logging
 
 When you are finished add, in your website directory will auto add a file which contain your account information.
 for example, when add domain love4026.org with ftp and mysql option, script will create two files:
@@ -429,6 +431,7 @@ if [ "$#" = "1" ] && [ "$1" = "--help" ]; then
 fi
 
 if [ "$#" = "2" ] && [ "$1" = "--remove" ]; then
+    # Test
     check_mycnf
     echo "Now removing vhost: $2, contain ftp,mysql,vhost ..."
     dbname=`echo $2 | tr . _`
