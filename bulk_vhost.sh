@@ -364,7 +364,7 @@ function install_empirecms {
     fi
     cp -r /tmp/empirecms.$$/EmpireCMS-7.0/upload/* "/home/wwwroot/$1"
     # Test mysql setting
-    if [ ! -n "$dbname"]; then
+    if [ ! -n "$dbname" ]; then
         add_mysql $1
     fi
     sed -i "s/value=\"username\"/value=\"$userid\"/; s/value=\"empirecms\"/value=\"$dbname\"/; s/id=\"mydbpassword\"/& value=\"$passwd\"/" \
@@ -442,7 +442,7 @@ if [ "$#" = "2" ] && [ "$1" = "--remove" ]; then
     exit 1
 fi
 
-while getopts "d:rlfma:ht" arg #选项后面的冒号表示该选项需要参数
+while getopts "d:rlfma:ht:" arg #选项后面的冒号表示该选项需要参数
 do
     case $arg in
     d) # domain list
@@ -530,7 +530,7 @@ for domain in $domainlist; do
 done
 
 # Save log and send with mail
-cat /tmp/all_domain_ftp_mysql.txt >> /root/all_domain_ftp_mysql.txt
+#cat /tmp/all_domain_ftp_mysql.txt >> /root/all_domain_ftp_mysql.txt
 if [ ! -z "$mail_to" ]; then
     if [ -f /etc/centos-release ]; then
         if [ -z "`which "sendmail" 2>/dev/null`" ]; then
