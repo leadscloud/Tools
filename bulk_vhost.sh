@@ -530,7 +530,7 @@ for domain in $domainlist; do
 done
 
 # Save log and send with mail
-#cat /tmp/all_domain_ftp_mysql.txt >> /root/all_domain_ftp_mysql.txt
+cat /tmp/all_domain_ftp_mysql.txt >> /root/all_domain_ftp_mysql.txt
 if [ ! -z "$mail_to" ]; then
     if [ -f /etc/centos-release ]; then
         if [ -z "`which "sendmail" 2>/dev/null`" ]; then
