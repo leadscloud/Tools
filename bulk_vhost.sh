@@ -22,6 +22,12 @@
 ################################################################################
 #
 
+# Check if user is root
+if [ $(id -u) != "0" ]; then
+    echo "Error: You must be root to run this script, use sudo sh $0"
+    exit 1
+fi
+
 hostip="$(ifconfig | grep -A 1 'eth0' | tail -1 | cut -d ':' -f 2 | cut -d ' ' -f 1)"
 
 function die {
@@ -319,14 +325,10 @@ function install_wordpress {
     cp -r /tmp/wordpress.$$/wordpress/* "/home/wwwroot/$1"
     chown -R www:www "/home/wwwroot/$1"
     chmod -R 755 "/home/wwwroot/$1"
-
-    # Setting up the MySQL database
-    dbname=`echo $1 | tr . _`
-    userid=`get_domain_name $1`
-    # MySQL userid cannot be more than 15 characters long
-    userid="${userid:0:15}"
-    userid=$userid$(date +"%y%m%d")
-    passwd=`get_password "$userid@mysql"`
+    if [ ! -n "$dbname"]; then
+        add_mysql $1
+    fi
+    # Setting wp-config.php 
     cp "/home/wwwroot/$1/wp-config-sample.php" "/home/wwwroot/$1/wp-config.php"
     sed -i "s/database_name_here/$dbname/; s/username_here/$userid/; s/password_here/$passwd/" \
         "/home/wwwroot/$1/wp-config.php"
@@ -337,15 +339,6 @@ function install_wordpress {
     sed -i "/#@+/,/#@-/d" "/home/wwwroot/$1/wp-config.php"
     rm /tmp/wp.keys
     # chown -R www:www "/home/wwwroot/$1/wp-config.php"
-    echo "CREATE DATABASE IF NOT EXISTS \`$dbname\` CHARACTER SET utf8 COLLATE utf8_general_ci;" | mysql
-    echo "GRANT ALL PRIVILEGES ON \`$dbname\`.* TO \`$userid\`@localhost IDENTIFIED BY '$passwd';" | \
-        mysql
-    cat >> "/home/wwwroot/$1/$1.mysql.txt" <<END
-[$1.wordpress_myqsl]
-dbname = $dbname
-username = $userid
-password = $passwd
-END
 }
 
 function install_typecho {
@@ -353,7 +346,7 @@ function install_typecho {
     if [ ! -d "/tmp/typecho.$$" ]; then
         # Downloading typecho build version
         mkdir /tmp/typecho.$$
-        wget -O - "http://typecho.org/build.tar.gz" | \
+        wget -O - "http://sbmzhcn.github.io/soft/typecho.tar.gz" | \
             tar zxf - -C /tmp/typecho.$$
     fi
     cp -r /tmp/typecho.$$/build/* "/home/wwwroot/$1"
@@ -370,6 +363,10 @@ function install_empirecms {
             tar zxf - -C /tmp/empirecms.$$
     fi
     cp -r /tmp/empirecms.$$/EmpireCMS-7.0/upload/* "/home/wwwroot/$1"
+    # Test mysql setting
+    if [ ! -n "$dbname"]; then
+        add_mysql $1
+    fi
     sed -i "s/value=\"username\"/value=\"$userid\"/; s/value=\"empirecms\"/value=\"$dbname\"/; s/id=\"mydbpassword\"/& value=\"$passwd\"/" \
         "/home/wwwroot/$1/e/install/index.php"
     sed -i "s/想[^<]*/请尽忙完成安装，以免被人窥探到数据库信息/" "/home/wwwroot/$1/e/install/index.php"
@@ -445,7 +442,7 @@ if [ "$#" = "2" ] && [ "$1" = "--remove" ]; then
     exit 1
 fi
 
-while getopts "d:rlfma:h" arg #选项后面的冒号表示该选项需要参数
+while getopts "d:rlfma:ht" arg #选项后面的冒号表示该选项需要参数
 do
     case $arg in
     d) # domain list
@@ -472,6 +469,9 @@ do
     a) # install web app
         check_mycnf
         web_app=$OPTARG
+    ;;
+    t) # send mail to
+        mail_to=$OPTARG
     ;;
     h) # help
         show_help
@@ -517,17 +517,37 @@ for domain in $domainlist; do
         esac
 
         print_info "Add vhost for domain:$domain successful"
-        echo "================================================" | tee -a /root/all_domain_ftp_mysql.txt
-        cat "/home/wwwroot/$domain/$domain.ftp.txt" | tee -a /root/all_domain_ftp_mysql.txt
-        cat "/home/wwwroot/$domain/$domain.mysql.txt" 2>/dev/null | tee -a /root/all_domain_ftp_mysql.txt
-        echo "Created by script in $(date +"%Y-%m-%d %T %:z")" | tee -a /root/all_domain_ftp_mysql.txt
-        echo "================================================" | tee -a /root/all_domain_ftp_mysql.txt
-        echo "" >>/root/all_domain_ftp_mysql.txt
+        echo "================================================" | tee -a /tmp/all_domain_ftp_mysql.txt
+        cat "/home/wwwroot/$domain/$domain.ftp.txt" | tee -a /tmp/all_domain_ftp_mysql.txt
+        cat "/home/wwwroot/$domain/$domain.mysql.txt" 2>/dev/null | tee -a /tmp/all_domain_ftp_mysql.txt
+        echo "Created by script in $(date +"%Y-%m-%d %T %:z")" | tee -a /tmp/all_domain_ftp_mysql.txt
+        echo "================================================" | tee -a /tmp/all_domain_ftp_mysql.txt
+        echo "" >>/tmp/all_domain_ftp_mysql.txt
 
         sed -i "/$/a Created by script in $(date +"%Y-%m-%d %T %:z")"  "/home/wwwroot/$domain/$domain.ftp.txt"
         sed -i "/$/a Created by script in $(date +"%Y-%m-%d %T %:z")"  "/home/wwwroot/$domain/$domain.mysql.txt"
     fi
 done
+
+# Save log and send with mail
+cat /tmp/all_domain_ftp_mysql.txt >> /root/all_domain_ftp_mysql.txt
+if [ ! -z "$mail_to" ]; then
+    if [ -f /etc/centos-release ]; then
+        if [ -z "`which "sendmail" 2>/dev/null`" ]; then
+            yum -y install sendmail
+            yum -y install mailx
+        else
+            #checking if service is running 
+            ps -e | grep sendmail > /dev/null 
+            servicestat=$(echo $?)   
+            if [ "$servicestat" != 0 ]; then
+               service sendmail start
+            fi
+        fi
+    fi
+    cat /tmp/all_domain_ftp_mysql.txt | mail -s "域名Vhost信息 send by script" "$mail_to"
+fi
+rm -rf /tmp/all_domain_ftp_mysql.txt
 
 # remove web app content
 if [ -d "/tmp/$web_app.$$" ] && [ "$web_app" != "" ]; then
