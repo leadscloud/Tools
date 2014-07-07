@@ -486,10 +486,10 @@ done
 
 for domain in $domainlist; do
     if [ ! -z "$domain" ]; then
-        if [ -f "/usr/local/nginx/conf/vhost/$domain.conf" ]; then
-            print_warn "$domain is exist! Please install it manual"
-            break
-        fi
+        # if [ -f "/usr/local/nginx/conf/vhost/$domain.conf" ]; then
+        #     print_warn "$domain is exist! Please install it manual"
+        #     break
+        # fi
         if [ -x /etc/init.d/httpd ]; then
             install_lnmpa_vhost $domain
         else
@@ -546,6 +546,7 @@ if [ ! -z "$mail_to" ]; then
         fi
     fi
     cat /tmp/all_domain_ftp_mysql.txt | mail -s "域名Vhost信息 send by script" "$mail_to"
+    echo "email have sent to $mail_to"
 fi
 rm -rf /tmp/all_domain_ftp_mysql.txt
 
