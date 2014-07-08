@@ -276,14 +276,23 @@ INSERT INTO ftpusers.users VALUES ('$ftpusername',MD5('$ftppwd'),501, 501, '$vho
 EOF
     if [ $? -ne 0 ]; then
         print_error "Add ftp user failure!"
-    fi
-    cat >> "/home/wwwroot/$1/$1.ftp.txt" <<END
+        if cat /tmp/sql_error | grep -q "Duplicate entry"; then
+            newstr=$(echo $1 | tr -d '.-')
+            newstr=${newstr:0-16:16}
+            ftpusername=`expr substr $(echo $newstr | tr -d '.-') 1 16`
+            mysql -u root 2>/dev/null <<EOF
+INSERT INTO ftpusers.users VALUES ('$ftpusername',MD5('$ftppwd'),501, 501, '$vhostdir', 100, 50, 1000, 1000, '*', 'by shell script added, $(date +"%Y-%m-%d")', '1', 0, 0);
+EOF
+        fi
+    else
+        cat > "/home/wwwlogs/$1.ftp.txt" <<END
 [$1.ftp]
 domainname = $1
 hostip = $hostip
 username = $ftpusername
 password = $ftppwd
 END
+    fi
 }
 
 function add_mysql {
@@ -302,15 +311,14 @@ function add_mysql {
 
     if [ $? -ne 0 ]; then
         print_error "Add mysql database failure!"
-    fi
-
-    cat >> "/home/wwwroot/$1/$1.mysql.txt" <<END
+    else
+        cat >> "/home/wwwlogs/$1.mysql.txt" <<END
 [$1.myqsl]
 dbname = $dbname
 username = $userid
 password = $passwd
 END
-
+    fi
 }
 
 
@@ -409,10 +417,10 @@ Example:
   `basename $0` -d love4026.org -fm -a wordpress -r wordpress      in LNMP,you will need nginx rewrite rule,can not use .htaccess
   `basename $0` -d love4026.org -fml                               quick add a domain with ftp,mysql,and turn on logging
 
-When you are finished add, in your website directory will auto add a file which contain your account information.
+When you are finished add, in your wwwlogs will auto add a file which contain your account information.
 for example, when add domain love4026.org with ftp and mysql option, script will create two files:
-    1. /home/wwwroot/love4026.org/love4026.org.ftp.txt
-    2. /home/wwwroot/love4026.org/love4026.org.mysql.txt
+    1. /home/wwwlogs/love4026.org.ftp.txt
+    2. /home/wwwlogs/love4026.org.mysql.txt
 
 Author: Ray.
 Website: <http://www.love4026.org>.
@@ -518,14 +526,14 @@ for domain in $domainlist; do
 
         print_info "Add vhost for domain:$domain successful"
         echo "================================================" | tee -a /tmp/all_domain_ftp_mysql.txt
-        cat "/home/wwwroot/$domain/$domain.ftp.txt" | tee -a /tmp/all_domain_ftp_mysql.txt
-        cat "/home/wwwroot/$domain/$domain.mysql.txt" 2>/dev/null | tee -a /tmp/all_domain_ftp_mysql.txt
+        cat "/home/wwwlogs/$domain.ftp.txt" | tee -a /tmp/all_domain_ftp_mysql.txt
+        cat "/home/wwwlogs/$domain.mysql.txt" 2>/dev/null | tee -a /tmp/all_domain_ftp_mysql.txt
         echo "Created by script in $(date +"%Y-%m-%d %T %:z")" | tee -a /tmp/all_domain_ftp_mysql.txt
         echo "================================================" | tee -a /tmp/all_domain_ftp_mysql.txt
         echo "" >>/tmp/all_domain_ftp_mysql.txt
 
-        sed -i "/$/a Created by script in $(date +"%Y-%m-%d %T %:z")"  "/home/wwwroot/$domain/$domain.ftp.txt" 2>/dev/null
-        sed -i "/$/a Created by script in $(date +"%Y-%m-%d %T %:z")"  "/home/wwwroot/$domain/$domain.mysql.txt" 2>/dev/null
+        sed -i "/$/a Created by script in $(date +"%Y-%m-%d %T %:z")"  "/home/wwwlogs/$domain.ftp.txt" 2>/dev/null
+        sed -i "/$/a Created by script in $(date +"%Y-%m-%d %T %:z")"  "/home/wwwlogs/$domain.mysql.txt" 2>/dev/null
     fi
 done
 
