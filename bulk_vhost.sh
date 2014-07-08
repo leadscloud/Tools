@@ -359,10 +359,10 @@ function install_empirecms {
     if [ ! -d "/tmp/empirecms.$$" ]; then
         # Downloading the EmpireCMS
         mkdir /tmp/empirecms.$$
-        wget -O - https://github.com/sbmzhcn/EmpireCMS/archive/v7.0.tar.gz | \
+        wget -O - http://sbmzhcn.github.io/soft/empirecms-7.0-utf8.tar.gz | \
             tar zxf - -C /tmp/empirecms.$$
     fi
-    cp -r /tmp/empirecms.$$/EmpireCMS-7.0/upload/* "/home/wwwroot/$1"
+    cp -r /tmp/empirecms.$$/* "/home/wwwroot/$1"
     # Test mysql setting
     if [ ! -n "$dbname" ]; then
         add_mysql $1
