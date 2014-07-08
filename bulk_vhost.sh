@@ -524,8 +524,8 @@ for domain in $domainlist; do
         echo "================================================" | tee -a /tmp/all_domain_ftp_mysql.txt
         echo "" >>/tmp/all_domain_ftp_mysql.txt
 
-        sed -i "/$/a Created by script in $(date +"%Y-%m-%d %T %:z")"  "/home/wwwroot/$domain/$domain.ftp.txt"
-        sed -i "/$/a Created by script in $(date +"%Y-%m-%d %T %:z")"  "/home/wwwroot/$domain/$domain.mysql.txt"
+        sed -i "/$/a Created by script in $(date +"%Y-%m-%d %T %:z")"  "/home/wwwroot/$domain/$domain.ftp.txt" 2>/dev/null
+        sed -i "/$/a Created by script in $(date +"%Y-%m-%d %T %:z")"  "/home/wwwroot/$domain/$domain.mysql.txt" 2>/dev/null
     fi
 done
 
@@ -533,7 +533,7 @@ done
 cat /tmp/all_domain_ftp_mysql.txt >> /root/all_domain_ftp_mysql.txt
 if [ ! -z "$mail_to" ]; then
     if [ -f /etc/centos-release ]; then
-        if [ -z "`which "sendmail" 2>/dev/null`" ]; then
+        if [ -z "`service sendmail 2>/dev/null`" ]; then
             yum -y install sendmail
             yum -y install mailx
         else
