@@ -271,7 +271,7 @@ function add_ftp {
     check_mycnf
     ftpusername=`expr substr $(echo $1 | tr -d '.') 1 16`
     ftppwd=`get_password "$ftpusername@ftp"`
-    mysql -u root <<EOF
+    mysql -u root 2>/tmp/sql_error <<EOF
 INSERT INTO ftpusers.users VALUES ('$ftpusername',MD5('$ftppwd'),501, 501, '$vhostdir', 100, 50, 1000, 1000, '*', 'by shell script added, $(date +"%Y-%m-%d")', '1', 0, 0);
 EOF
     if [ $? -ne 0 ]; then
@@ -284,6 +284,7 @@ EOF
 INSERT INTO ftpusers.users VALUES ('$ftpusername',MD5('$ftppwd'),501, 501, '$vhostdir', 100, 50, 1000, 1000, '*', 'by shell script added, $(date +"%Y-%m-%d")', '1', 0, 0);
 EOF
         fi
+        rm -rf /tmp/sql_error
     else
         cat >> "/home/wwwlogs/$1.ftp.txt" <<END
 [$1.ftp]
