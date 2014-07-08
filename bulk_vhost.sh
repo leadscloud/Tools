@@ -285,7 +285,7 @@ INSERT INTO ftpusers.users VALUES ('$ftpusername',MD5('$ftppwd'),501, 501, '$vho
 EOF
         fi
     else
-        cat > "/home/wwwlogs/$1.ftp.txt" <<END
+        cat >> "/home/wwwlogs/$1.ftp.txt" <<END
 [$1.ftp]
 domainname = $1
 hostip = $hostip
@@ -358,6 +358,7 @@ function install_typecho {
             tar zxf - -C /tmp/typecho.$$
     fi
     cp -r /tmp/typecho.$$/build/* "/home/wwwroot/$1"
+    cp -r /tmp/typecho.$$/build/.[!.]* "/home/wwwroot/$1"
     chown -R www "/home/wwwroot/$1"
     chmod -R 755 "/home/wwwroot/$1"
 }
