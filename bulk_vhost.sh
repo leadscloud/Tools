@@ -7,7 +7,7 @@
 # 
 # Author: Ray Chang <http://www.love4026.org>
 # 
-# Version: 1.0.2
+# Version: 1.0.3
 #
 # FTP Service must be pureftpd.
 #
@@ -17,7 +17,7 @@
 # For more information please visit http://www.love4026.org/
 # Code url: https://raw.githubusercontent.com/sbmzhcn/Tools/master/bulk_vhost.sh
 # 
-# Last Updated: 2014-07-03
+# Last Updated: 2014-08-28
 #
 ################################################################################
 #
@@ -28,7 +28,13 @@ if [ $(id -u) != "0" ]; then
     exit 1
 fi
 
-hostip="$(ifconfig | grep -A 1 'eth0' | tail -1 | cut -d ':' -f 2 | cut -d ' ' -f 1)"
+function gethostip {
+    hostip="$(ifconfig | grep -A 1 'eth0' | tail -1 | cut -d ':' -f 2 | cut -d ' ' -f 1)"
+    if [ ! -n "$hostip" ]; then
+        hostip=`hostname -i`
+    fi
+    echo $hostip
+}
 
 function die {
     echo "ERROR: $1" > /dev/null 1>&2
@@ -52,10 +58,21 @@ function print_error {
 }
 
 function install_lnmp_vhost {
+    fcgipath="fcgi.conf"
+    if [ -f /usr/local/nginx/conf/fastcgi.conf ]; then
+        fcgipath="fastcgi.conf"
+    elif [ -f /usr/local/nginx/conf/fcgi.conf ]; then
+        fcgipath="fcgi.conf"
+    fi
+
     if [ ! -z "$1" ]; then
         domain=$1
         moredomainame=" www.$domain"
         vhostdir="/home/wwwroot/$domain"
+    fi
+
+    if [ ! -d /usr/local/nginx/conf/vhost ]; then
+        mkdir /usr/local/nginx/conf/vhost
     fi
 
     if [ "$access_log" != 'y' ]; then
@@ -100,12 +117,16 @@ server
         #@- 301 redirect
 
         include $rewrite.conf;
-        location ~ .*\.(php|php5)?$
+        #error_page   404   /404.html;
+        #location ~ .*\.(php|php5)?$
+        location ~ [^/]\.php(/|$)
             {
+                # comment try_files \$uri =404; to enable pathinfo
                 try_files \$uri =404;
                 fastcgi_pass  unix:/tmp/php-cgi.sock;
                 fastcgi_index index.php;
-                include fcgi.conf;
+                include $fcgipath;
+                #include pathinfo.conf;
             }
 
         location ~ .*\.(gif|jpg|jpeg|png|bmp|swf)$
@@ -123,7 +144,7 @@ server
 eof
         cur_php_version=`/usr/local/php/bin/php -r 'echo PHP_VERSION;'`
 
-        if echo "$cur_php_version" | grep -q "5.3."
+        if echo "$cur_php_version" | grep -qE "5.3.|5.4.|5.5."
         then
             cat >>/usr/local/php/etc/php.ini<<eof
 [HOST=$domain]
@@ -271,8 +292,10 @@ function add_ftp {
     check_mycnf
     ftpusername=`expr substr $(echo $1 | tr -d '.') 1 16`
     ftppwd=`get_password "$ftpusername@ftp"`
+    wwwuid=`id -u www`
+    wwwgid=`id -g www`
     mysql -u root 2>/tmp/sql_error <<EOF
-INSERT INTO ftpusers.users VALUES ('$ftpusername',MD5('$ftppwd'),501, 501, '$vhostdir', 100, 50, 1000, 1000, '*', 'by shell script added, $(date +"%Y-%m-%d")', '1', 0, 0);
+INSERT INTO ftpusers.users VALUES ('$ftpusername',MD5('$ftppwd'), $wwwuid, $wwwgid, '$vhostdir', 100, 50, 1000, 1000, '*', 'by shell script added, $(date +"%Y-%m-%d")', '1', 0, 0);
 EOF
     if [ $? -ne 0 ]; then
         print_error "Add ftp user failure!"
@@ -281,7 +304,7 @@ EOF
             newstr=${newstr:0-16:16}
             ftpusername=`expr substr $(echo $newstr | tr -d '.-') 1 16`
             mysql -u root 2>/dev/null <<EOF
-INSERT INTO ftpusers.users VALUES ('$ftpusername',MD5('$ftppwd'),501, 501, '$vhostdir', 100, 50, 1000, 1000, '*', 'by shell script added, $(date +"%Y-%m-%d")', '1', 0, 0);
+INSERT INTO ftpusers.users VALUES ('$ftpusername',MD5('$ftppwd'), $wwwuid, $wwwgid, '$vhostdir', 100, 50, 1000, 1000, '*', 'by shell script added, $(date +"%Y-%m-%d")', '1', 0, 0);
 EOF
         fi
         rm -rf /tmp/sql_error
@@ -289,7 +312,7 @@ EOF
         cat >> "/home/wwwlogs/$1.ftp.txt" <<END
 [$1.ftp]
 domainname = $1
-hostip = $hostip
+hostip = $(gethostip)
 username = $ftpusername
 password = $ftppwd
 END
