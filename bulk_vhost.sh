@@ -7,7 +7,7 @@
 # 
 # Author: Ray Chang <http://www.love4026.org>
 # 
-# Version: 1.0.3
+# Version: 1.0.4
 #
 # FTP Service must be pureftpd.
 #
@@ -17,7 +17,7 @@
 # For more information please visit http://www.love4026.org/
 # Code url: https://raw.githubusercontent.com/sbmzhcn/Tools/master/bulk_vhost.sh
 # 
-# Last Updated: 2014-08-28
+# Last Updated: 2014-11-21
 #
 ################################################################################
 #
@@ -298,16 +298,25 @@ function add_ftp {
 INSERT INTO ftpusers.users VALUES ('$ftpusername',MD5('$ftppwd'), $wwwuid, $wwwgid, '$vhostdir', 100, 50, 1000, 1000, '*', 'by shell script added, $(date +"%Y-%m-%d")', '1', 0, 0);
 EOF
     if [ $? -ne 0 ]; then
-        print_error "Add ftp user failure!"
         if cat /tmp/sql_error | grep -q "Duplicate entry"; then
             newstr=$(echo $1 | tr -d '.-')
             newstr=${newstr:0-16:16}
             ftpusername=`expr substr $(echo $newstr | tr -d '.-') 1 16`
-            mysql -u root 2>/dev/null <<EOF
+            mysql -u root 2>/tmp/sql_error <<EOF
 INSERT INTO ftpusers.users VALUES ('$ftpusername',MD5('$ftppwd'), $wwwuid, $wwwgid, '$vhostdir', 100, 50, 1000, 1000, '*', 'by shell script added, $(date +"%Y-%m-%d")', '1', 0, 0);
 EOF
+            if [ $? -ne 0 ]; then
+               print_error "Add ftp user failure! `cat /tmp/sql_error`"
+            else
+                cat >> "/home/wwwlogs/$1.ftp.txt" <<END
+[$1.ftp]
+domainname = $1
+hostip = $(gethostip)
+username = $ftpusername
+password = $ftppwd
+END
+            fi
         fi
-        rm -rf /tmp/sql_error
     else
         cat >> "/home/wwwlogs/$1.ftp.txt" <<END
 [$1.ftp]
@@ -317,6 +326,7 @@ username = $ftpusername
 password = $ftppwd
 END
     fi
+    #rm -rf /tmp/sql_error
 }
 
 function add_mysql {
@@ -348,16 +358,31 @@ END
 
 function install_wordpress {
     check_mycnf
+    INSTALL_DIR="/home/wwwroot/$1"
     if [ ! -d "/tmp/wordpress.$$" ]; then
         # Downloading the WordPress' latest and greatest distribution.
         mkdir /tmp/wordpress.$$
-        wget -O - http://wordpress.org/latest.tar.gz | \
+        wget -O - http://wordpress.org/latest.tar.gz --no-check-certificate | \
             tar zxf - -C /tmp/wordpress.$$
     fi
-    cp -r /tmp/wordpress.$$/wordpress/* "/home/wwwroot/$1"
-    chown -R www:www "/home/wwwroot/$1"
-    chmod -R 755 "/home/wwwroot/$1"
-    if [ ! -n "$dbname"]; then
+    cp -r /tmp/wordpress.$$/wordpress/* $INSTALL_DIR
+    cd $INSTALL_DIR
+    # Install wordpress plugins
+    array=(fv-all-in-one-seo-pack.zip yet-another-related-posts-plugin.3.5.1.zip disabler.2.1.zip google-sitemap-plugin.1.08.zip wptouch.1.9.40.zip)
+    length=${#array[@]}
+    for ((i=0; i<$length; i++))
+    do
+    plugin_url=http://downloads.wordpress.org/plugin/${array[$i]}
+    wget $plugin_url
+    unzip -n ${array[$i]} -d $INSTALL_DIR/wp-content/plugins
+    rm -rf ${array[$i]}
+    echo "${array[$i]} OK"
+    done
+    echo "wordpress plugins installed"
+
+    chown -R www:www $INSTALL_DIR
+    chmod -R 755 $INSTALL_DIR
+    if [ ! -n "$dbname" ]; then
         add_mysql $1
     fi
     # Setting wp-config.php 
@@ -551,14 +576,17 @@ for domain in $domainlist; do
 
         print_info "Add vhost for domain:$domain successful"
         echo "================================================" | tee -a /tmp/all_domain_ftp_mysql.txt
-        cat "/home/wwwlogs/$domain.ftp.txt" | tee -a /tmp/all_domain_ftp_mysql.txt
-        cat "/home/wwwlogs/$domain.mysql.txt" 2>/dev/null | tee -a /tmp/all_domain_ftp_mysql.txt
+        if [ -f "/home/wwwlogs/$domain.ftp.txt" ]; then
+            cat "/home/wwwlogs/$domain.ftp.txt" | tee -a /tmp/all_domain_ftp_mysql.txt
+        fi
+        if [ -f "/home/wwwlogs/$domain.mysql.txt" ]; then
+            cat "/home/wwwlogs/$domain.mysql.txt" 2>/dev/null | tee -a /tmp/all_domain_ftp_mysql.txt
+        fi
         echo "Created by script in $(date +"%Y-%m-%d %T %:z")" | tee -a /tmp/all_domain_ftp_mysql.txt
         echo "================================================" | tee -a /tmp/all_domain_ftp_mysql.txt
         echo "" >>/tmp/all_domain_ftp_mysql.txt
-
-        sed -i "/$/a Created by script in $(date +"%Y-%m-%d %T %:z")"  "/home/wwwlogs/$domain.ftp.txt" 2>/dev/null
-        sed -i "/$/a Created by script in $(date +"%Y-%m-%d %T %:z")"  "/home/wwwlogs/$domain.mysql.txt" 2>/dev/null
+        sed -i "\$aCreated by script in $(date +"%Y-%m-%d %T %:z")"  "/home/wwwlogs/$domain.ftp.txt" 2>/dev/null
+        sed -i "\$aCreated by script in $(date +"%Y-%m-%d %T %:z")"  "/home/wwwlogs/$domain.mysql.txt" 2>/dev/null
     fi
 done
 
