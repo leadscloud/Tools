@@ -75,6 +75,19 @@ function install_lnmp_vhost {
         mkdir /usr/local/nginx/conf/vhost
     fi
 
+    if [ ! -f /usr/local/nginx/conf/301.conf ]; then
+        cat >>/usr/local/nginx/conf/301.conf<<EOF
+#@+ 301 redirect
+if ( \$request_uri ~* /index\.(html|htm|php)$ ) {
+    rewrite ^(.*)index\.(html|htm|php)$ \$1 permanent;
+}
+if (\$host !~* ^www\.) {
+    rewrite ^/(.*)$ \$scheme://www.\$host/\$1 permanent;
+}
+#@- 301 redirect
+EOF
+    fi
+
     if [ "$access_log" != 'y' ]; then
       al="access_log off;"
     else
@@ -94,6 +107,15 @@ function install_lnmp_vhost {
         if [ -z $rewrite ]; then
             rewrite="none"
         fi
+        case "$web_app" in
+        wordpress)
+             rewrite="wordpress"
+            ;;
+        typecho)
+            rewrite="typecho"
+            ;;
+        esac
+
         if [ ! -f /usr/local/nginx/conf/$rewrite.conf ]; then
             touch /usr/local/nginx/conf/$rewrite.conf
         fi
@@ -107,15 +129,6 @@ server
         index index.html index.htm index.php default.html default.htm default.php;
         root  $vhostdir;
         
-        #@+ 301 redirect
-        if ( \$request_uri ~* /index\.(html|htm|php)$ ) {
-            rewrite ^(.*)index\.(html|htm|php)$ \$1 permanent;
-        }
-        if (\$host !~* ^www\.) {
-            rewrite ^/(.*)$ \$scheme://www.\$host/\$1 permanent;
-        }
-        #@- 301 redirect
-
         include $rewrite.conf;
         #error_page   404   /404.html;
         #location ~ .*\.(php|php5)?$
@@ -481,7 +494,7 @@ END
     exit 1
 }
 
-if [ "$#" = "1" ] && [ "$1" = "--help" ]; then
+if [ "$#" = "1" ] && [ "$1" = "--help" ] || [ "$#" = "0" ]; then
     show_help
 fi
 
@@ -500,7 +513,7 @@ if [ "$#" = "2" ] && [ "$1" = "--remove" ]; then
     exit 1
 fi
 
-while getopts "d:rlfma:ht:" arg #选项后面的冒号表示该选项需要参数
+while getopts "d:r:lfma:ht:" arg #选项后面的冒号表示该选项需要参数
 do
     case $arg in
     d) # domain list
