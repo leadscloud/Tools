@@ -7,7 +7,7 @@
 # 
 # Author: Ray Chang <http://www.love4026.org>
 # 
-# Version: 1.0.4
+# Version: 1.0.5
 #
 # FTP Service must be pureftpd.
 #
@@ -17,7 +17,7 @@
 # For more information please visit http://www.love4026.org/
 # Code url: https://raw.githubusercontent.com/sbmzhcn/Tools/master/bulk_vhost.sh
 # 
-# Last Updated: 2014-11-21
+# Last Updated: 2015-3-15
 #
 ################################################################################
 #
@@ -31,7 +31,7 @@ fi
 function gethostip {
     hostip="$(ifconfig | grep -A 1 'eth0' | tail -1 | cut -d ':' -f 2 | cut -d ' ' -f 1)"
     if [ ! -n "$hostip" ]; then
-        hostip=`hostname -i`
+        hostip=`hostname -I | grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}'`
     fi
     echo $hostip
 }
