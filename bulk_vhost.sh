@@ -155,6 +155,10 @@ server
         $al
     }
 eof
+		if [ "$rewrite" = "typecho" ] || [ "$web_app" = "typecho" ]; then
+        	sed -i -e 's/try_files/#&/' -e 's/#include pathinfo.conf/include pathinfo.conf/' /usr/local/nginx/conf/vhost/$domain.conf
+        fi
+        
         cur_php_version=`/usr/local/php/bin/php -r 'echo PHP_VERSION;'`
 
         if echo "$cur_php_version" | grep -qE "5.3.|5.4.|5.5."
@@ -312,23 +316,46 @@ INSERT INTO ftpusers.users VALUES ('$ftpusername',MD5('$ftppwd'), $wwwuid, $wwwg
 EOF
     if [ $? -ne 0 ]; then
         if cat /tmp/sql_error | grep -q "Duplicate entry"; then
-            newstr=$(echo $1 | tr -d '.-')
-            newstr=${newstr:0-16:16}
-            ftpusername=`expr substr $(echo $newstr | tr -d '.-') 1 16`
-            mysql -u root 2>/tmp/sql_error <<EOF
-INSERT INTO ftpusers.users VALUES ('$ftpusername',MD5('$ftppwd'), $wwwuid, $wwwgid, '$vhostdir', 100, 50, 1000, 1000, '*', 'by shell script added, $(date +"%Y-%m-%d")', '1', 0, 0);
-EOF
-            if [ $? -ne 0 ]; then
-               print_error "Add ftp user failure! `cat /tmp/sql_error`"
-            else
-                cat >> "/home/wwwlogs/$1.ftp.txt" <<END
+        	dirname=$(echo "SELECT Dir FROM ftpusers.users WHERE User='$ftpusername';" | mysql -u root | tr -s '\n' ' ' | cut -d ' ' -f 2 )
+			if [ "$dirname" = "$vhostdir" ]; then
+				print_warn 'FTP user is exsit!'
+				if [ ! -f "/home/wwwlogs/$1.ftp.txt" ]; then
+					echo "UPDATE ftpusers.users SET Password=MD5('$ftppwd') WHERE  User='$ftpusername';" | mysql -u root
+					if [ $? -ne 0 ]; then
+						echo "UPDATE User '$ftpusername' failure!"
+					else
+						cat >> "/home/wwwlogs/$1.ftp.txt" <<END
 [$1.ftp]
 domainname = $1
 hostip = $(gethostip)
 username = $ftpusername
 password = $ftppwd
 END
-            fi
+					fi
+				else
+					cat "/home/wwwlogs/$1.ftp.txt"
+				fi
+			else
+		        newstr=$(echo $1 | tr -d '.-')
+		        newstr=${newstr:0:12}`date +%s%N | md5sum | head -c 4`
+		        ftpusername=`expr substr $(echo $newstr | tr -d '.-') 1 16`
+		        mysql -u root 2>/tmp/sql_error <<EOF
+	INSERT INTO ftpusers.users VALUES ('$ftpusername',MD5('$ftppwd'), $wwwuid, $wwwgid, '$vhostdir', 100, 50, 1000, 1000, '*', 'by shell script added, $(date +"%Y-%m-%d")', '1', 0, 0);
+EOF
+		        if [ $? -ne 0 ]; then
+		           print_error "Add ftp user failure! `cat /tmp/sql_error`"
+		        else
+		            cat >> "/home/wwwlogs/$1.ftp.txt" <<END
+	[$1.ftp]
+	domainname = $1
+	hostip = $(gethostip)
+	username = $ftpusername
+	password = $ftppwd
+END
+		        fi
+				
+			fi
+			
         fi
     else
         cat >> "/home/wwwlogs/$1.ftp.txt" <<END
